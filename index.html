@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="am">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Ludo Coin</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Ethiopic:wght@400;600;800&family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#12142B; --panel:#1B1E3D; --panel2:#232752; --panel3:#2B2F63;
+    --gold:#F5B301; --gold2:#FFD866;
+    --red:#E63950; --green:#29B673; --yellow:#F4C430; --blue:#3E8EDE;
+    --text:#EDEFFB; --muted:#9295C2; --line:#31356A;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family:'Noto Sans Ethiopic','Baloo 2',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased; overscroll-behavior:none;}
+  body{padding-bottom:78px;}
+  .num{font-family:'Baloo 2','Noto Sans Ethiopic',sans-serif;}
+
+  /* ---- top bar ---- */
+  .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;
+    justify-content:space-between;gap:10px;padding:14px 16px 10px;
+    background:linear-gradient(180deg,var(--bg) 70%,transparent);}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .coin3d{width:38px;height:38px;border-radius:50%;position:relative;flex:none;
+    background:radial-gradient(circle at 32% 28%,var(--gold2),var(--gold) 60%,#a86e00 100%);
+    box-shadow:0 3px 0 #8a5c00, 0 6px 14px rgba(0,0,0,.4);
+    display:flex;align-items:center;justify-content:center;
+    animation:coinspin 3.2s linear infinite;}
+  .coin3d::after{content:'';position:absolute;inset:5px;border-radius:50%;
+    border:2px dashed rgba(0,0,0,.25);}
+  .coin3d b{font-size:15px;color:#7a4e00;}
+  @keyframes coinspin{0%{transform:rotateY(0)}100%{transform:rotateY(360deg)}}
+  .brandtxt{line-height:1.1;}
+  .brandtxt .t1{font-family:'Baloo 2';font-weight:800;font-size:17px;letter-spacing:.3px;}
+  .brandtxt .t1 span{color:var(--gold);}
+  .brandtxt .t2{font-size:11px;color:var(--muted);}
+  .wallet-pill{display:flex;align-items:center;gap:6px;background:var(--panel2);
+    border:1px solid var(--line);padding:8px 12px;border-radius:999px;}
+  .wallet-pill .dot{width:9px;height:9px;border-radius:50%;background:var(--gold);
+    box-shadow:0 0 8px var(--gold);}
+  .wallet-pill b{font-family:'Baloo 2';font-size:15px;}
+
+  /* ---- tabs content ---- */
+  .screen{padding:4px 16px 20px; display:none;}
+  .screen.active{display:block;}
+  h2.section{font-family:'Baloo 2';font-size:16px;margin:14px 0 10px;color:var(--gold2);}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;
+    padding:14px;margin-bottom:12px;}
+
+  /* ---- play setup ---- */
+  .modebar{display:flex;gap:8px;margin-bottom:12px;}
+  .modebtn{flex:1;text-align:center;padding:12px 6px;border-radius:14px;
+    background:var(--panel2);border:1.5px solid var(--line);color:var(--text);
+    font-family:'Noto Sans Ethiopic';font-weight:600;font-size:13px;cursor:pointer;}
+  .modebtn.sel{border-color:var(--gold);background:linear-gradient(180deg,#3a3c6e,#2a2c58);}
+  .bigbtn{width:100%;padding:14px;border-radius:16px;border:none;
+    background:linear-gradient(180deg,var(--gold2),var(--gold));
+    color:#3a2600;font-family:'Baloo 2';font-weight:800;font-size:16px;
+    box-shadow:0 4px 0 #8a5c00; cursor:pointer;}
+  .bigbtn:active{transform:translateY(2px);box-shadow:0 2px 0 #8a5c00;}
+  .ghostbtn{width:100%;padding:12px;border-radius:14px;margin-top:8px;
+    background:transparent;border:1.5px solid var(--line);color:var(--muted);
+    font-family:'Noto Sans Ethiopic';font-weight:600;font-size:13px;cursor:pointer;}
+
+  /* ---- board ---- */
+  .boardwrap{display:flex;justify-content:center;margin:6px 0 10px;}
+  .board{position:relative;width:min(94vw,420px);aspect-ratio:1/1;
+    background:var(--panel2);border-radius:20px;border:2px solid var(--line);
+    box-shadow:inset 0 0 0 6px var(--bg);}
+  .cell{position:absolute;background:#2e3266;border-radius:3px;}
+  .cell.safe{background:#3a3f80;}
+  .cell.safe::after{content:'★';position:absolute;inset:0;display:flex;align-items:center;
+    justify-content:center;font-size:52%;color:var(--gold2);}
+  .yard{position:absolute;border-radius:16px;display:grid;grid-template-columns:1fr 1fr;
+    grid-template-rows:1fr 1fr;gap:6%;padding:10%;}
+  .yard .slot{border-radius:50%;background:rgba(0,0,0,.18);display:flex;align-items:center;
+    justify-content:center;}
+  .yard.red{top:0;left:0;width:38.4%;height:38.4%;background:rgba(230,57,80,.20);}
+  .yard.green{top:0;right:0;width:38.4%;height:38.4%;background:rgba(41,182,115,.20);}
+  .yard.yellow{bottom:0;right:0;width:38.4%;height:38.4%;background:rgba(244,196,48,.20);}
+  .yard.blue{bottom:0;left:0;width:38.4%;height:38.4%;background:rgba(62,142,222,.20);}
+  .home{position:absolute;top:38.4%;left:38.4%;width:23.2%;height:23.2%;
+    background:conic-gradient(var(--red) 0 90deg, var(--green) 90deg 180deg,
+    var(--yellow) 180deg 270deg, var(--blue) 270deg 360deg);
+    border-radius:8px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;
+    transform:rotate(45deg);overflow:hidden;box-shadow:0 0 0 3px var(--bg);}
+  .home .q{display:flex;align-items:center;justify-content:center;}
+  .home .q b{transform:rotate(-45deg);font-size:11px;color:#111;font-family:'Baloo 2';
+    text-shadow:0 1px 0 rgba(255,255,255,.35);}
+  .token{position:absolute;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 2px 4px rgba(0,0,0,.5), inset 0 -3px 0 rgba(0,0,0,.25);
+    transition:left .35s cubic-bezier(.4,1.8,.5,1), top .35s cubic-bezier(.4,1.8,.5,1);
+    cursor:pointer; z-index:5;}
+  .token.movable{animation:pulse 0.8s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.22)}}
+  .token .pip{width:38%;height:38%;border-radius:50%;background:rgba(255,255,255,.55);}
+  .tok-red{background:radial-gradient(circle at 32% 28%,#ff8a97,var(--red));}
+  .tok-green{background:radial-gradient(circle at 32% 28%,#7be8b8,var(--green));}
+  .tok-yellow{background:radial-gradient(circle at 32% 28%,#ffe58a,var(--yellow));}
+  .tok-blue{background:radial-gradient(circle at 32% 28%,#9dc9f7,var(--blue));}
+
+  /* ---- HUD ---- */
+  .hud{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
+  .pcard{background:var(--panel);border:1.5px solid var(--line);border-radius:14px;padding:9px 10px;
+    display:flex;flex-direction:column;gap:6px;opacity:.55;}
+  .pcard.turn{opacity:1;border-color:var(--gold);box-shadow:0 0 0 2px rgba(245,179,1,.25);}
+  .pcard .pname{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;}
+  .pcard .sw{width:11px;height:11px;border-radius:50%;}
+  .lane{display:flex;gap:3px;}
+  .lane i{flex:1;height:6px;border-radius:3px;background:var(--line);}
+  .lane i.on{background:var(--gold);}
+
+  .dicewrap{display:flex;align-items:center;justify-content:center;gap:14px;margin:14px 0 4px;}
+  .dice{width:58px;height:58px;border-radius:14px;background:linear-gradient(180deg,#fff,#dcdcf0);
+    display:flex;align-items:center;justify-content:center;font-family:'Baloo 2';font-size:26px;
+    color:#20223f;box-shadow:0 4px 0 #9a9ac0;cursor:pointer;user-select:none;}
+  .dice.rolling{animation:roll .5s linear;}
+  @keyframes roll{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+  .turnlabel{text-align:center;font-size:13px;color:var(--muted);margin-top:6px;min-height:18px;}
+  .turnlabel b{color:var(--text);}
+
+  /* ---- tasks ---- */
+  .task{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);
+    border-radius:16px;padding:12px;margin-bottom:10px;}
+  .task .ic{width:42px;height:42px;border-radius:12px;background:var(--panel3);display:flex;
+    align-items:center;justify-content:center;font-size:20px;flex:none;}
+  .task .info{flex:1;min-width:0;}
+  .task .info .tt{font-size:13.5px;font-weight:600;}
+  .task .info .rw{font-size:12px;color:var(--gold2);margin-top:2px;font-family:'Baloo 2';}
+  .task .act{flex:none;}
+  .btnsm{padding:9px 13px;border-radius:11px;border:none;font-family:'Noto Sans Ethiopic';
+    font-weight:600;font-size:12.5px;cursor:pointer;}
+  .btnsm.open{background:var(--panel3);color:var(--text);border:1px solid var(--line);}
+  .btnsm.claim{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#3a2600;}
+  .btnsm.done{background:transparent;color:#5fbf87;border:1px solid #2e5c43;}
+  .btnsm[disabled]{opacity:.5;pointer-events:none;}
+
+  /* ---- wallet ---- */
+  .balancecard{background:linear-gradient(160deg,#2a2d5c,#1b1e3d);border:1px solid var(--line);
+    border-radius:20px;padding:22px;text-align:center;margin-bottom:14px;}
+  .balancecard .lbl{font-size:12px;color:var(--muted);margin-bottom:6px;}
+  .balancecard .val{font-family:'Baloo 2';font-size:38px;color:var(--gold2);}
+  .statrow{display:flex;gap:10px;}
+  .statbox{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:12px;text-align:center;}
+  .statbox .v{font-family:'Baloo 2';font-size:18px;}
+  .statbox .l{font-size:11px;color:var(--muted);margin-top:2px;}
+  .invitebox{display:flex;gap:8px;margin-top:6px;}
+  .invitebox input{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+    color:var(--text);padding:11px 12px;font-size:12px;min-width:0;}
+  .invitebox button{border:none;border-radius:12px;padding:0 16px;background:var(--gold);
+    color:#3a2600;font-weight:700;font-size:12.5px;cursor:pointer;}
+
+  /* ---- bottom nav ---- */
+  .navbar{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--panel);
+    border-top:1px solid var(--line);padding:8px 6px calc(8px + env(safe-area-inset-bottom));z-index:30;}
+  .navbtn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;
+    color:var(--muted);cursor:pointer;font-size:11px;font-weight:600;}
+  .navbtn .ic{font-size:19px;}
+  .navbtn.active{color:var(--gold2);}
+
+  /* toast */
+  .toast{position:fixed;left:50%;bottom:92px;transform:translate(-50%,20px);background:#1e2145;
+    border:1px solid var(--gold);color:var(--gold2);padding:11px 18px;border-radius:999px;
+    font-size:13px;font-weight:600;opacity:0;transition:all .35s;z-index:60;white-space:nowrap;
+    box-shadow:0 8px 24px rgba(0,0,0,.4);}
+  .toast.show{opacity:1;transform:translate(-50%,0);}
+
+  .winmodal{position:fixed;inset:0;background:rgba(8,9,20,.78);display:none;align-items:center;
+    justify-content:center;z-index:70;padding:20px;}
+  .winmodal.show{display:flex;}
+  .wincard{background:var(--panel);border:1px solid var(--gold);border-radius:22px;padding:28px 22px;
+    text-align:center;max-width:320px;}
+  .wincard .em{font-size:44px;}
+  .wincard h3{font-family:'Baloo 2';margin:8px 0 4px;font-size:20px;}
+  .wincard p{color:var(--muted);font-size:13px;margin:0 0 16px;}
+  .wincard .rw{font-family:'Baloo 2';font-size:26px;color:var(--gold2);margin-bottom:16px;}
+  .rankrow{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;
+    background:var(--panel2);margin-bottom:6px;font-size:12.5px;}
+  .rankrow .rk{font-family:'Baloo 2';width:20px;text-align:center;color:var(--gold2);}
+  .rankrow .sw{width:10px;height:10px;border-radius:50%;flex:none;}
+  .rankrow .nm{flex:1;}
+  .rankrow .pt{font-family:'Baloo 2';color:var(--gold2);}
+
+  .loading{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;
+    justify-content:center;z-index:100;flex-direction:column;gap:12px;}
+  .loading .coin3d{width:52px;height:52px;}
+</style>
+</head>
+<body>
+
+<div class="loading" id="loading">
+  <div class="coin3d"><b>L</b></div>
+  <div style="color:var(--muted);font-size:13px;">Ludo Coin እየተጫነ ነው...</div>
+</div>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="coin3d"><b>L</b></div>
+    <div class="brandtxt">
+      <div class="t1">LUDO<span>COIN</span></div>
+      <div class="t2" id="hello">ሰላም, ተጫዋች</div>
+    </div>
+  </div>
+  <div class="wallet-pill"><span class="dot"></span><b class="num" id="topBalance">0</b></div>
+</div>
+
+<!-- PLAY -->
+<div class="screen active" id="screen-play">
+
+  <div class="modebar" id="topModeBar">
+    <div class="modebtn sel" data-topmode="offline" onclick="selectTopMode('offline')">🤖 ኦፍላይን (ቦት)</div>
+    <div class="modebtn" data-topmode="online" onclick="selectTopMode('online')">🌐 ኦንላይን (ከሰው ጋር)</div>
+  </div>
+
+  <!-- OFFLINE vs BOT -->
+  <div class="card" id="setupCard">
+    <h2 class="section" style="margin-top:0;">🎲 ሉዶ ተጫወት</h2>
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:10px;">ተጋጣሚ ይምረጡ እና ጨዋታውን ይጀምሩ። እያንዳንዱ ጨዋታ ሳንቲም ያስገኝልዎታል!</div>
+    <div class="modebar">
+      <div class="modebtn sel" data-mode="2" onclick="selectMode(2)">👤 እርስዎ vs 1 ቦት</div>
+      <div class="modebtn" data-mode="4" onclick="selectMode(4)">👥 እርስዎ vs 3 ቦቶች</div>
+    </div>
+    <button class="bigbtn" onclick="startGame()">ጨዋታ ጀምር</button>
+  </div>
+
+  <div id="gameArea" style="display:none;">
+    <div class="boardwrap"><div class="board" id="board"></div></div>
+    <div class="dicewrap"><div class="dice" id="dice" onclick="handleDiceTap()">?</div></div>
+    <div class="turnlabel" id="turnLabel">የ<b>እርስዎ</b> ተራ ነው — ዳይሱን ይንኩ</div>
+    <div class="hud" id="hud"></div>
+    <button class="ghostbtn" onclick="resetGame()">🔄 ጨዋታውን እንደገና ጀምር</button>
+  </div>
+
+  <!-- ONLINE MULTIPLAYER -->
+  <div class="card" id="mpSetupCard" style="display:none;">
+    <h2 class="section" style="margin-top:0;">🌐 ከሰው ጋር ተጫወት</h2>
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:10px;">ውድድር ነው — 1ኛ ከሁሉም በላይ ነጥብ ያገኛል!</div>
+    <div class="modebar">
+      <div class="modebtn sel" data-mpmode="2" onclick="selectMpMode(2)">👥 2 ተጫዋቾች</div>
+      <div class="modebtn" data-mpmode="4" onclick="selectMpMode(4)">👥 4 ተጫዋቾች</div>
+    </div>
+    <button class="bigbtn" onclick="mpQuickMatch()">⚡ ፈጣን ግጥሚያ ፈልግ</button>
+    <button class="ghostbtn" onclick="mpCreateRoom()">➕ ክፍል ፍጠር (ኮድ ላክ)</button>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <input id="mpCodeInput" placeholder="ኮድ ያስገቡ" maxlength="6"
+        style="flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+        color:var(--text);padding:12px;font-size:14px;text-transform:uppercase;text-align:center;
+        font-family:'Baloo 2';letter-spacing:2px;">
+      <button class="btnsm claim" style="padding:0 16px;" onclick="mpJoinRoom()">ግባ</button>
+    </div>
+  </div>
+
+  <div class="card" id="mpLobby" style="display:none;text-align:center;">
+    <div style="font-size:13px;color:var(--muted);margin-bottom:6px;" id="mpLobbyStatus">ግጥሚያ በመፈለግ ላይ...</div>
+    <div class="num" id="mpRoomCode" style="font-size:30px;letter-spacing:6px;color:var(--gold2);margin:8px 0;"></div>
+    <div class="invitebox" id="mpCodeCopyRow" style="display:none;">
+      <input id="mpCodeCopyInput" readonly>
+      <button onclick="mpCopyCode()">ኮፒ</button>
+    </div>
+    <div id="mpPlayerSlots" style="display:flex;gap:8px;justify-content:center;margin:14px 0;flex-wrap:wrap;"></div>
+    <button class="ghostbtn" onclick="mpLeaveRoom()">✕ ተወው</button>
+  </div>
+
+  <div id="mpGameArea" style="display:none;">
+    <div class="boardwrap"><div class="board" id="mpBoard"></div></div>
+    <div class="dicewrap"><div class="dice" id="mpDice" onclick="mpHandleDiceTap()">?</div></div>
+    <div class="turnlabel" id="mpTurnLabel">በመጠባበቅ ላይ...</div>
+    <div class="hud" id="mpHud"></div>
+    <button class="ghostbtn" onclick="mpLeaveRoom()">🚪 ጨዋታውን ልቀቁ</button>
+  </div>
+</div>
+
+<!-- TASKS -->
+<div class="screen" id="screen-tasks">
+  <h2 class="section" style="margin-top:6px;">💰 ተግባራት ስሩ, ሳንቲም ያግኙ</h2>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">ተግባሩን ይክፈቱ ➝ ካደረጉት በኋላ ይመልሱ እና ሽልማትዎን ይውሰዱ።</div>
+  <div id="tasksList"></div>
+</div>
+
+<!-- WALLET -->
+<div class="screen" id="screen-wallet">
+  <h2 class="section" style="margin-top:6px;">👛 ዋሌት</h2>
+  <div class="balancecard">
+    <div class="lbl">ጠቅላላ ሳንቲም</div>
+    <div class="val num" id="walletBalance">0</div>
+  </div>
+  <div class="statrow">
+    <div class="statbox"><div class="v num" id="statGames">0</div><div class="l">የተጫወቱት ጨዋታዎች</div></div>
+    <div class="statbox"><div class="v num" id="statWins">0</div><div class="l">ድሎች</div></div>
+    <div class="statbox"><div class="v num" id="statTasks">0</div><div class="l">የተጠናቀቁ ተግባራት</div></div>
+  </div>
+  <div class="card" style="margin-top:14px;">
+    <h2 class="section" style="margin-top:0;">🎁 ጓደኞችን ይጋብዙ</h2>
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:8px;">የግል ሊንክዎን በመላክ ጓደኛዎ ሲቀላቀል ተጨማሪ ሳንቲም ያግኙ።</div>
+    <div class="invitebox">
+      <input id="inviteLink" readonly value="https://t.me/YOUR_BOT?start=ref_guest">
+      <button onclick="copyInvite()">ኮፒ</button>
+    </div>
+  </div>
+</div>
+
+<div class="navbar">
+  <div class="navbtn active" data-tab="play" onclick="switchTab('play')"><div class="ic">🎲</div>ጨዋታ</div>
+  <div class="navbtn" data-tab="tasks" onclick="switchTab('tasks')"><div class="ic">✅</div>ተግባራት</div>
+  <div class="navbtn" data-tab="wallet" onclick="switchTab('wallet')"><div class="ic">👛</div>ዋሌት</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="winmodal" id="winModal">
+  <div class="wincard">
+    <div class="em" id="winEmoji">🏆</div>
+    <h3 id="winTitle">አሸንፈዋል!</h3>
+    <p id="winSub">ሁሉንም ቁራጮችዎን ወደ ቤት አድርሰዋል።</p>
+    <div id="winRankList" style="display:none;text-align:left;margin-bottom:14px;"></div>
+    <div class="rw num" id="winReward">+0 🪙</div>
+    <button class="bigbtn" onclick="closeWinModal()">እሺ</button>
+  </div>
+</div>
+
+<script src="/game-engine.js"></script>
+<script>
+/* =========================================================================
+   LUDO COIN — Telegram Mini App prototype
+   ------------------------------------------------------------------------
+   ⚙️  CONFIG — edit these before you publish the bot
+   ========================================================================= */
+const CONFIG = {
+  BOT_USERNAME: "YOUR_BOT_USERNAME",           // e.g. LudoCoinBot (no @)
+  YOUTUBE_CHANNEL_URL: "https://youtube.com/@YOUR_CHANNEL",
+  YOUTUBE_LATEST_VIDEO_URL: "https://youtube.com/@YOUR_CHANNEL/videos",
+  TELEGRAM_GROUP_URL: "https://t.me/YOUR_GROUP",
+  TELEGRAM_CHANNEL_URL: "https://t.me/YOUR_CHANNEL",
+  TIKTOK_URL: "https://tiktok.com/@YOUR_ACCOUNT",
+};
+
+const TASK_CONFIG = [
+  { id:"yt_sub",   icon:"▶️", title:"የYouTube ቻናላችንን Subscribe አድርጉ", url:CONFIG.YOUTUBE_CHANNEL_URL, reward:200, daily:false },
+  { id:"yt_view",  icon:"👁️", title:"አዲሱን ቪዲዮ ይመልከቱ",                 url:CONFIG.YOUTUBE_LATEST_VIDEO_URL, reward:100, daily:false },
+  { id:"tg_group", icon:"👥", title:"የቴሌግራም ግሩፓችንን ይቀላቀሉ",           url:CONFIG.TELEGRAM_GROUP_URL, reward:200, daily:false },
+  { id:"tg_chan",  icon:"📢", title:"የቴሌግራም ቻናላችንን ይቀላቀሉ",           url:CONFIG.TELEGRAM_CHANNEL_URL, reward:200, daily:false },
+  { id:"tk_follow",icon:"🎵", title:"በTikTok ላይ Follow ያድርጉን",         url:CONFIG.TIKTOK_URL, reward:200, daily:false },
+  { id:"daily",    icon:"📅", title:"የዕለት ጉብኝት ቦነስ",                   url:null, reward:30, daily:true },
+];
+
+const REWARDS = { tokenFinish:15, winSmall:300, winBig:500, participation:25 };
+
+// Multiplayer is a real competition: reward depends on final RANK, not just win/lose.
+const MP_RANK_REWARDS = {
+  2: [400, 100],           // [1st, 2nd]
+  4: [500, 300, 150, 60],  // [1st, 2nd, 3rd, 4th]
+};
+
+/* ---- Telegram WebApp bootstrap ---- */
+const tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+if (tg) { try { tg.ready(); tg.expand(); } catch(e){} }
+const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : null;
+
+/* =========================================================================
+   Backend API — real, server-verified wallet/tasks (see /server.js).
+   All coin-changing calls go through the API so the server (not this
+   client script) is the source of truth for balances.
+   ========================================================================= */
+let wallet = { coins:0, gamesPlayed:0, gamesWon:0 };
+let tasksDone = {}; // { taskId: true/false } — from GET /api/tasks
+const LIVE = !!(tg && tg.initData);       // true only when actually opened inside Telegram
+if (!LIVE) console.warn('Not running inside Telegram — using local test mode, nothing is saved.');
+
+async function api(path, opts={}){
+  const res = await fetch(path, {
+    ...opts,
+    headers:{
+      'Content-Type':'application/json',
+      'X-Telegram-Init-Data': tg ? tg.initData : '',
+      ...(opts.headers||{}),
+    },
+  });
+  let body = null;
+  try{ body = await res.json(); }catch(e){}
+  if (!res.ok) throw { status:res.status, body };
+  return body;
+}
+
+async function loadState(){
+  if (!LIVE){
+    // local test mode (opened outside Telegram) — nothing persists, just lets you click around
+    wallet = { coins:0, gamesPlayed:0, gamesWon:0 };
+    tasksDone = {};
+    return;
+  }
+  try{
+    const s = await api('/api/state');
+    wallet.coins = s.coins; wallet.gamesPlayed = s.gamesPlayed; wallet.gamesWon = s.gamesWon;
+  }catch(e){ showToast('⚠️ ከሰርቨር ጋር መገናኘት አልተቻለም'); }
+  try{
+    tasksDone = await api('/api/tasks');
+  }catch(e){}
+}
+
+function addCoinsLocal(amount, reason){
+  wallet.coins += amount;
+  renderWallet();
+  showToast(`🎉 +${amount} LUDO ${reason||''}`);
+}
+
+/* =========================================================================
+   Tabs
+   ========================================================================= */
+function switchTab(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  document.querySelectorAll('.navbtn').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
+}
+
+function selectTopMode(mode){
+  document.querySelectorAll('#topModeBar .modebtn').forEach(b=>b.classList.toggle('sel', b.dataset.topmode===mode));
+  const offlineOn = mode==='offline';
+  const offlineGameOn = document.getElementById('gameArea').style.display !== 'none';
+  document.getElementById('setupCard').style.display = offlineOn && !offlineGameOn ? 'block' : 'none';
+  document.getElementById('gameArea').style.display = offlineOn && offlineGameOn ? 'block' : 'none';
+  document.getElementById('mpSetupCard').style.display = (!offlineOn && mp.screen==='setup') ? 'block' : 'none';
+  document.getElementById('mpLobby').style.display = (!offlineOn && mp.screen==='lobby') ? 'block' : 'none';
+  document.getElementById('mpGameArea').style.display = (!offlineOn && mp.screen==='game') ? 'block' : 'none';
+}
+
+/* =========================================================================
+   TASKS
+   ========================================================================= */
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+
+const openedLocally = {}; // ephemeral "did they tap Open" flag, per session only
+
+function renderTasks(){
+  const list = document.getElementById('tasksList');
+  list.innerHTML = '';
+  TASK_CONFIG.forEach(t=>{
+    const claimed = !!tasksDone[t.id];
+    const opened = !!openedLocally[t.id] || !t.url;
+
+    const row = document.createElement('div');
+    row.className = 'task';
+    row.innerHTML = `
+      <div class="ic">${t.icon}</div>
+      <div class="info">
+        <div class="tt">${t.title}</div>
+        <div class="rw">+${t.reward} 🪙</div>
+      </div>
+      <div class="act"></div>
+    `;
+    const act = row.querySelector('.act');
+
+    if (claimed){
+      const b = document.createElement('button');
+      b.className='btnsm done'; b.textContent = t.daily ? '✓ ዛሬ ተወስዷል' : '✓ ተጠናቋል';
+      b.disabled = true; act.appendChild(b);
+    } else if (!opened){
+      const b = document.createElement('button');
+      b.className='btnsm open'; b.textContent='ክፈት';
+      b.onclick = ()=>{ window.open(t.url, '_blank'); openedLocally[t.id]=true; renderTasks(); };
+      act.appendChild(b);
+    } else {
+      const b = document.createElement('button');
+      b.className='btnsm claim'; b.textContent = t.daily ? 'ቦነስ ውሰድ' : 'ተጠናቋል ✓ ውሰድ';
+      b.onclick = ()=> claimTask(t);
+      act.appendChild(b);
+    }
+    list.appendChild(row);
+  });
+  document.getElementById('statTasks').textContent = Object.values(tasksDone).filter(Boolean).length;
+}
+
+async function claimTask(t){
+  if (!LIVE){ showToast('⚠️ ይህ በTelegram ውስጥ ብቻ ይሰራል'); return; }
+  try{
+    const r = await api('/api/task/claim', { method:'POST', body: JSON.stringify({ taskId:t.id }) });
+    tasksDone[t.id] = true;
+    wallet.coins = r.coins;
+    renderWallet();
+    showToast(`🎉 +${r.awarded} LUDO አግኝተዋል`);
+    renderTasks();
+  }catch(e){
+    const code = e.body && e.body.error;
+    if (code==='not_a_member') showToast('❌ እባክዎ መጀመሪያ ይቀላቀሉ, ከዚያ ይመልሱ');
+    else if (code==='already_claimed') { tasksDone[t.id]=true; renderTasks(); showToast('ይህ ተግባር አስቀድሞ ተወስዷል'); }
+    else showToast('⚠️ የሆነ ስህተት ተፈጠረ, ደግመው ይሞክሩ');
+  }
+}
+
+/* =========================================================================
+   WALLET
+   ========================================================================= */
+function renderWallet(){
+  document.getElementById('topBalance').textContent = wallet.coins;
+  document.getElementById('walletBalance').textContent = wallet.coins;
+  document.getElementById('statGames').textContent = wallet.gamesPlayed;
+  document.getElementById('statWins').textContent = wallet.gamesWon;
+  const uid = tgUser ? tgUser.id : 'guest';
+  document.getElementById('inviteLink').value =
+    `https://t.me/${CONFIG.BOT_USERNAME}?start=ref_${uid}`;
+}
+function copyInvite(){
+  const input = document.getElementById('inviteLink');
+  input.select(); input.setSelectionRange(0,999);
+  try{ navigator.clipboard.writeText(input.value); showToast('ሊንኩ ተኮፒ ተደርጓል 📋'); }catch(e){}
+}
+
+/* =========================================================================
+   Toast / win modal
+   ========================================================================= */
+let toastTimer=null;
+function showToast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove('show'), 2400);
+}
+function closeWinModal(){ document.getElementById('winModal').classList.remove('show'); }
+
+/* =========================================================================
+   LUDO GAME ENGINE
+   ========================================================================= */
+const COLORS = ['red','green','yellow','blue'];
+const RING_LEN = 48;
+const RING_STEPS = 45;   // relative steps 0..44 on shared ring
+const FINISH_R = 50;     // relative step at which a token is "home"
+const START_IDX = { red:1, green:13, yellow:25, blue:37 };
+const SAFE_GLOBAL = new Set(Object.values(START_IDX));
+
+function buildRing(){
+  const c = [];
+  for(let col=00;col<=12;col++) c.push([0,col]);
+  for(let row=1;row<=12;row++) c.push([row,12]);
+  for(let col=11;col>=0;col--) c.push([12,col]);
+  for(let row=11;row>=1;row--) c.push([row,0]);
+  return c;
+}
+const RING = buildRing();
+
+let game = null; // active game state
+
+function freshGame(mode){
+  const active = mode===2 ? ['red','yellow'] : COLORS.slice();
+  const tokens = {};
+  COLORS.forEach(c=>{ tokens[c] = [-1,-1,-1,-1]; }); // -1 = in yard
+  return {
+    mode, active,
+    tokens,
+    turnIdx: 0,           // index into `active`
+    dice: null,
+    consecutiveSixes: 0,
+    movable: [],
+    awaitingHumanPick: false,
+    over: false,
+  };
+}
+
+function selectMode(m){
+  document.querySelectorAll('.modebtn').forEach(b=>b.classList.toggle('sel', +b.dataset.mode===m));
+  game = game || {}; game.pendingMode = m;
+}
+selectMode(2);
+
+function startGame(){
+  const mode = game && game.pendingMode ? game.pendingMode : 2;
+  game = freshGame(mode);
+  document.getElementById('setupCard').style.display='none';
+  document.getElementById('gameArea').style.display='block';
+  buildBoardDom();
+  buildHud();
+  renderTokens();
+  setTurnLabel();
+}
+function resetGame(){
+  document.getElementById('gameArea').style.display='none';
+  document.getElementById('setupCard').style.display='block';
+  game = null;
+  document.getElementById('dice').textContent='?';
+}
+
+/* ---- board DOM (cells, yards, home) built once per game ---- */
+function buildBoardDom(){
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  const cellPct = 100/13;
+  RING.forEach(([r,c], i)=>{
+    const d = document.createElement('div');
+    d.className = 'cell' + (SAFE_GLOBAL.has(i) ? ' safe' : '');
+    d.style.width = cellPct+'%'; d.style.height = cellPct+'%';
+    d.style.left = (c*cellPct)+'%'; d.style.top = (r*cellPct)+'%';
+    board.appendChild(d);
+  });
+  ['red','green','yellow','blue'].forEach(color=>{
+    const y = document.createElement('div');
+    y.className = 'yard '+color;
+    for(let i=0;i<4;i++){
+      const s = document.createElement('div');
+      s.className='slot'; s.dataset.color=color; s.dataset.slot=i;
+      y.appendChild(s);
+    }
+    board.appendChild(y);
+  });
+  const home = document.createElement('div');
+  home.className='home';
+  home.innerHTML = `
+    <div class="q" style="background:var(--red)"><b id="fin-red">0</b></div>
+    <div class="q" style="background:var(--green)"><b id="fin-green">0</b></div>
+    <div class="q" style="background:var(--blue)"><b id="fin-blue">0</b></div>
+    <div class="q" style="background:var(--yellow)"><b id="fin-yellow">0</b></div>
+  `;
+  board.appendChild(home);
+}
+
+function buildHud(){
+  const hud = document.getElementById('hud');
+  hud.innerHTML = '';
+  game.active.forEach(color=>{
+    const card = document.createElement('div');
+    card.className = 'pcard'; card.id = 'pcard-'+color;
+    card.innerHTML = `
+      <div class="pname"><span class="sw" style="background:var(--${color})"></span>
+        ${labelFor(color)}</div>
+      <div class="lane" id="lane-${color}">
+        ${[0,1,2,3].map(t=>`<div style="display:flex;gap:2px;flex:1;" id="lane-${color}-${t}">
+          ${[0,1,2,3,4].map(()=>'<i></i>').join('')}
+        </div>`).join('')}
+      </div>`;
+    hud.appendChild(card);
+  });
+}
+function labelFor(color){
+  if (color==='red') return 'እርስዎ (ቀይ)';
+  const names = {green:'አረንጓዴ ቦት', yellow:'ቢጫ ቦት', blue:'ሰማያዊ ቦት'};
+  return names[color];
+}
+
+/* ---- rendering tokens on ring / yard / home-lane / finished ---- */
+function globalIndexFor(color, r){ return (START_IDX[color] + r) % RING_LEN; }
+
+function renderTokens(){
+  document.querySelectorAll('.token').forEach(t=>t.remove());
+  const board = document.getElementById('board');
+  const cellPct = 100/13;
+  const finished = {red:0,green:0,yellow:0,blue:0};
+
+  game.active.forEach(color=>{
+    game.tokens[color].forEach((r, idx)=>{
+      // update home-lane visualization
+      for(let i=0;i<5;i++){
+        const dot = document.querySelector(`#lane-${color}-${idx} i:nth-child(${i+1})`);
+        if(!dot) continue;
+        const stretchStep = r - RING_STEPS; // 0..4 within home stretch
+        dot.classList.toggle('on', r>=RING_STEPS && stretchStep>i);
+      }
+
+      if (r === -1){
+        // in yard — position over its slot
+        const slot = document.querySelector(`.yard.${color} .slot[data-slot="${idx}"]`);
+        if (slot){
+          const rect = slot.getBoundingClientRect();
+          const brect = board.getBoundingClientRect();
+          placeToken(color, idx, r, (rect.left-brect.left)/brect.width*100,
+                     (rect.top-brect.top)/brect.height*100, brect.width);
+        }
+      } else if (r >= FINISH_R){
+        finished[color]++;
+      } else if (r >= RING_STEPS){
+        // in home stretch — not drawn on ring (shown via lane), skip token dot
+      } else {
+        const gi = globalIndexFor(color, r);
+        const [row,col] = RING[gi];
+        placeTokenGrid(color, idx, row, col, cellPct);
+      }
+    });
+  });
+
+  COLORS.forEach(c=>{ const el=document.getElementById('fin-'+c); if(el) el.textContent = finished[c]; });
+}
+
+function placeTokenGrid(color, idx, row, col, cellPct){
+  const board = document.getElementById('board');
+  const size = cellPct*0.72;
+  const jitter = [[0,0],[10,0],[0,10],[10,10]][idx%4];
+  const el = document.createElement('div');
+  el.className = 'token tok-'+color;
+  el.style.width = size+'%'; el.style.height = size+'%';
+  el.style.left = (col*cellPct + cellPct*0.14 + jitter[0]*0.012) + '%';
+  el.style.top  = (row*cellPct + cellPct*0.14 + jitter[1]*0.012) + '%';
+  el.innerHTML = '<div class="pip"></div>';
+  if (isMovable(color, idx)) el.classList.add('movable');
+  el.onclick = ()=> tryPickToken(color, idx);
+  board.appendChild(el);
+}
+function placeToken(color, idx, r, leftPct, topPct, boardWidthPx){
+  const board = document.getElementById('board');
+  const sizePx = boardWidthPx*0.072;
+  const el = document.createElement('div');
+  el.className = 'token tok-'+color;
+  el.style.width = sizePx+'px'; el.style.height = sizePx+'px';
+  el.style.left = 'calc(' + leftPct + '% + ' + (boardWidthPx*0.11) + 'px)';
+  el.style.top  = 'calc(' + topPct + '% + ' + (boardWidthPx*0.11) + 'px)';
+  el.innerHTML = '<div class="pip"></div>';
+  if (isMovable(color, idx)) el.classList.add('movable');
+  el.onclick = ()=> tryPickToken(color, idx);
+  board.appendChild(el);
+}
+
+/* =========================================================================
+   Turn / rules logic
+   ========================================================================= */
+function currentColor(){ return game.active[game.turnIdx]; }
+function isHumanTurn(){ return currentColor()==='red'; }
+
+function setTurnLabel(msg){
+  const el = document.getElementById('turnLabel');
+  if (msg){ el.innerHTML = msg; return; }
+  document.querySelectorAll('.pcard').forEach(c=>c.classList.remove('turn'));
+  const pc = document.getElementById('pcard-'+currentColor());
+  if (pc) pc.classList.add('turn');
+  el.innerHTML = isHumanTurn()
+    ? 'የ<b>እርስዎ</b> ተራ ነው — ዳይሱን ይንኩ'
+    : `የ<b>${labelFor(currentColor())}</b> ተራ ነው...`;
+}
+
+function movesFor(color, dice){
+  const list = [];
+  game.tokens[color].forEach((r, idx)=>{
+    if (r===-1){ if (dice===6) list.push(idx); return; }
+    if (r>=FINISH_R) return;
+    if (r+dice<=FINISH_R) list.push(idx);
+  });
+  return list;
+}
+function isMovable(color, idx){
+  return game.awaitingHumanPick && isHumanTurn() && game.movable.includes(idx);
+}
+
+function handleDiceTap(){
+  if (!game || game.over) return;
+  if (!isHumanTurn() || game.awaitingHumanPick) return;
+  rollDice();
+}
+
+function rollDice(){
+  const diceEl = document.getElementById('dice');
+  diceEl.classList.add('rolling');
+  let n=0;
+  const spin = setInterval(()=>{ diceEl.textContent = 1+Math.floor(Math.random()*6); n++; if(n>6) clearInterval(spin); }, 50);
+  setTimeout(()=>{
+    clearInterval(spin);
+    diceEl.classList.remove('rolling');
+    const val = 1+Math.floor(Math.random()*6);
+    diceEl.textContent = val;
+    game.dice = val;
+    resolveRoll(val);
+  }, 420);
+}
+
+function resolveRoll(dice){
+  const color = currentColor();
+  const moves = movesFor(color, dice);
+  if (dice===6) game.consecutiveSixes++; else game.consecutiveSixes=0;
+
+  if (moves.length===0){
+    setTurnLabel(`ምንም ማንቀሳቀስ የሚቻል ቁራጭ የለም (🎲 ${dice})`);
+    setTimeout(()=>afterMove(dice), 650);
+    return;
+  }
+  if (color==='red'){
+    if (moves.length===1){
+      setTimeout(()=>applyMove('red', moves[0], dice), 350);
+    } else {
+      game.movable = moves;
+      game.awaitingHumanPick = true;
+      renderTokens();
+      setTurnLabel('የሚያንቀሳቅሱትን ቁራጭ ይንኩ 👆');
+    }
+  } else {
+    const idx = pickAIMove(color, dice, moves);
+    setTimeout(()=>applyMove(color, idx, dice), 550);
+  }
+}
+
+function tryPickToken(color, idx){
+  if (!game.awaitingHumanPick || color!=='red' || !isMovable(color, idx)) return;
+  game.awaitingHumanPick = false;
+  const dice = game.dice;
+  game.movable = [];
+  applyMove(color, idx, dice);
+}
+
+function pickAIMove(color, dice, moves){
+  // priority: capture opponent > finish a token > release from yard > most advanced token
+  let best=null, bestScore=-1;
+  moves.forEach(idx=>{
+    const r = game.tokens[color][idx];
+    const newR = r===-1 ? 0 : r+dice;
+    let score = newR; // base: prefer furthest progress
+    if (newR===FINISH_R) score += 100;
+    if (r===-1) score += 20;
+    if (newR < RING_STEPS){
+      const gi = globalIndexFor(color, newR);
+      if (!SAFE_GLOBAL.has(gi)){
+        COLORS.forEach(oc=>{
+          if (oc===color) return;
+          game.tokens[oc].forEach(orr=>{
+            if (orr>=0 && orr<RING_STEPS && globalIndexFor(oc,orr)===gi) score += 60;
+          });
+        });
+      }
+    }
+    if (score>bestScore){ bestScore=score; best=idx; }
+  });
+  return best;
+}
+
+function applyMove(color, idx, dice){
+  const r = game.tokens[color][idx];
+  const newR = (r===-1) ? 0 : r+dice;
+  game.tokens[color][idx] = newR;
+
+  // capture check (only on shared ring, non-safe cells)
+  if (newR < RING_STEPS){
+    const gi = globalIndexFor(color, newR);
+    if (!SAFE_GLOBAL.has(gi)){
+      COLORS.forEach(oc=>{
+        if (oc===color) return;
+        game.tokens[oc].forEach((orr, oidx)=>{
+          if (orr>=0 && orr<RING_STEPS && globalIndexFor(oc,orr)===gi){
+            game.tokens[oc][oidx] = -1;
+            if (color==='red') showToast(`💥 የ${labelFor(oc)} ቁራጭ ያዙ!`);
+          }
+        });
+      });
+    }
+  }
+  if (newR===FINISH_R && color==='red'){
+    showToast('🏁 ቁራጭ ደርሷል! (ሽልማት ጨዋታው ሲያልቅ ይሰላል)');
+  }
+
+  renderTokens();
+
+  if (game.tokens[color].every(v=>v===FINISH_R)){
+    endGame(color);
+    return;
+  }
+  afterMove(dice);
+}
+
+function afterMove(dice){
+  if (dice===6 && game.consecutiveSixes<3){
+    setTurnLabel();
+    if (isHumanTurn()){
+      setTurnLabel('🎲 6! ደግመው ይንኩ');
+    } else {
+      setTimeout(rollDice, 500);
+    }
+    return;
+  }
+  game.consecutiveSixes = 0;
+  game.turnIdx = (game.turnIdx+1) % game.active.length;
+  setTurnLabel();
+  if (!isHumanTurn()){
+    setTimeout(rollDice, 650);
+  }
+}
+
+async function endGame(winner){
+  game.over = true;
+  const humanWon = winner==='red';
+  const tokensFinished = game.tokens.red.filter(v=>v===FINISH_R).length;
+
+  let awarded = humanWon ? (game.mode===2?REWARDS.winSmall:REWARDS.winBig) : REWARDS.participation;
+  awarded += tokensFinished * REWARDS.tokenFinish;
+
+  if (LIVE){
+    try{
+      const r = await api('/api/game/finish', {
+        method:'POST',
+        body: JSON.stringify({ won:humanWon, mode:game.mode, tokensFinished }),
+      });
+      wallet.coins = r.coins; awarded = r.awarded;
+    }catch(e){ showToast('⚠️ ውጤቱን ማስቀመጥ አልተቻለም'); }
+  } else {
+    wallet.coins += awarded;
+  }
+  wallet.gamesPlayed++;
+  if (humanWon) wallet.gamesWon++;
+  renderWallet();
+
+  document.getElementById('winEmoji').textContent = humanWon ? '🏆' : '🎮';
+  document.getElementById('winTitle').textContent = humanWon ? 'አሸንፈዋል!' : (labelFor(winner)+' አሸነፈ');
+  document.getElementById('winSub').style.display = 'block';
+  document.getElementById('winSub').textContent = humanWon
+    ? 'ሁሉንም ቁራጮችዎን ወደ ቤት አድርሰዋል።' : 'በሚቀጥለው ጨዋታ ይሞክሩ!';
+  document.getElementById('winRankList').style.display = 'none';
+  document.getElementById('winReward').textContent = `+${awarded} 🪙`;
+  document.getElementById('winModal').classList.add('show');
+}
+
+/* =========================================================================
+   ONLINE MULTIPLAYER — real players across different phones, via Socket.IO.
+   Reuses the same visual language as offline mode but keeps its own state
+   (`mp`) and a fresh set of render functions, so the offline vs-bot code
+   above is completely untouched.
+   ========================================================================= */
+const mp = {
+  screen: 'setup',   // 'setup' | 'lobby' | 'game'
+  mode: 2,
+  socket: null,
+  roomId: null,
+  myColor: null,
+  players: [],       // [{color,name,connected}]
+  state: null,        // server-authoritative game state (tokens, turnIdx, dice, movable, awaitingPick, over, winner)
+  quickSearching: false,
+};
+
+function selectMpMode(m){
+  document.querySelectorAll('#mpSetupCard .modebtn[data-mpmode]').forEach(b=>b.classList.toggle('sel', +b.dataset.mpmode===m));
+  mp.mode = m;
+}
+
+function mpEnsureSocket(){
+  if (mp.socket && mp.socket.connected) return mp.socket;
+  if (!LIVE){ showToast('⚠️ ኦንላይን ጨዋታ በTelegram ውስጥ ብቻ ይሰራል'); return null; }
+  const s = io({ auth: { initData: tg.initData } });
+  mp.socket = s;
+
+  s.on('connect_error', ()=> showToast('⚠️ ከሰርቨር ጋር መገናኘት አልተቻለም'));
+  s.on('disconnect', ()=> { if (mp.screen!=='setup') showToast('🔌 ግንኙነት ተቋርጧል፣ በመገናኘት ላይ...'); });
+  s.on('connect', ()=> { if (mp.roomId) s.emit('room:rejoin', { roomId: mp.roomId }); });
+
+  s.on('quick:waiting', ()=> { mp.quickSearching = true; mpShowLobby('ግጥሚያ በመፈለግ ላይ...'); });
+  s.on('room:created', ({ roomId })=> { mp.roomId = roomId; mpShowLobby(); });
+  s.on('room:joined', ({ roomId, color })=> { mp.roomId = roomId; mp.myColor = color; mpShowLobby(); });
+  s.on('room:error', ({ error })=> {
+    const msgs = { not_found:'ኮዱ አልተገኘም', full:'ክፍሉ ሞልቷል', already_started:'ጨዋታው ተጀምሯል' };
+    showToast('❌ ' + (msgs[error] || 'ስህተት ተፈጥሯል'));
+  });
+  s.on('room:update', (view)=> mpApplyRoomView(view));
+  s.on('game:over', (payload)=> mpShowResults(payload));
+
+  return s;
+}
+
+function mpQuickMatch(){
+  const s = mpEnsureSocket(); if (!s) return;
+  mp.roomId = null;
+  s.emit('quick:join', { mode: mp.mode });
+  mpShowLobby('ግጥሚያ በመፈለግ ላይ...');
+}
+function mpCreateRoom(){
+  const s = mpEnsureSocket(); if (!s) return;
+  mp.myColor = 'red';
+  s.emit('room:create', { mode: mp.mode });
+  mpShowLobby();
+}
+function mpJoinRoom(){
+  const s = mpEnsureSocket(); if (!s) return;
+  const code = document.getElementById('mpCodeInput').value.trim().toUpperCase();
+  if (code.length < 4){ showToast('ትክክለኛ ኮድ ያስገቡ'); return; }
+  s.emit('room:join', { roomId: code });
+  mpShowLobby();
+}
+function mpLeaveRoom(){
+  if (mp.socket){ mp.socket.emit('room:leave'); mp.socket.disconnect(); mp.socket = null; }
+  mp.roomId = null; mp.myColor = null; mp.state = null; mp.players = [];
+  mp.screen = 'setup';
+  document.getElementById('mpSetupCard').style.display = 'block';
+  document.getElementById('mpLobby').style.display = 'none';
+  document.getElementById('mpGameArea').style.display = 'none';
+}
+
+function mpShowLobby(statusMsg){
+  mp.screen = 'lobby';
+  document.getElementById('mpSetupCard').style.display = 'none';
+  document.getElementById('mpGameArea').style.display = 'none';
+  document.getElementById('mpLobby').style.display = 'block';
+  document.getElementById('mpLobbyStatus').textContent = statusMsg || 'ሌላ ተጫዋች በመጠባበቅ ላይ...';
+  if (mp.roomId){
+    document.getElementById('mpRoomCode').textContent = mp.roomId;
+    document.getElementById('mpCodeCopyRow').style.display = 'flex';
+    document.getElementById('mpCodeCopyInput').value = mp.roomId;
+  } else {
+    document.getElementById('mpRoomCode').textContent = '';
+    document.getElementById('mpCodeCopyRow').style.display = 'none';
+  }
+  mpRenderSlots();
+}
+function mpCopyCode(){
+  const input = document.getElementById('mpCodeCopyInput');
+  input.select(); input.setSelectionRange(0,999);
+  try{ navigator.clipboard.writeText(input.value); showToast('ኮዱ ተኮፒ ተደርጓል 📋'); }catch(e){}
+}
+function mpRenderSlots(){
+  const el = document.getElementById('mpPlayerSlots');
+  el.innerHTML='';
+  const total = mp.mode;
+  for(let i=0;i<total;i++){
+    const p = mp.players[i];
+    const slot = document.createElement('div');
+    slot.style.cssText = 'width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;';
+    if (p){
+      slot.style.background = `var(--${p.color})`;
+      slot.textContent = '👤';
+      slot.title = p.name;
+    } else {
+      slot.style.background = 'var(--panel2)';
+      slot.style.border = '2px dashed var(--line)';
+      slot.textContent = '…';
+    }
+    el.appendChild(slot);
+  }
+}
+
+function mpApplyRoomView(view){
+  mp.roomId = view.id;
+  mp.mode = view.mode;
+  mp.players = view.players;
+  const me = view.players.find(p=>p.uid===String(tgUser && tgUser.id));
+  if (me) mp.myColor = me.color;
+
+  if (view.status === 'waiting'){
+    mpShowLobby();
+    return;
+  }
+  if (view.status === 'playing' || view.status === 'finished'){
+    mp.state = view.state;
+    mpEnterGame();
+  }
+}
+
+function mpEnterGame(){
+  const firstTime = mp.screen !== 'game';
+  mp.screen = 'game';
+  document.getElementById('mpSetupCard').style.display = 'none';
+  document.getElementById('mpLobby').style.display = 'none';
+  document.getElementById('mpGameArea').style.display = 'block';
+  if (firstTime){ mpBuildBoardDom(); mpBuildHud(); }
+  mpRenderTokens();
+  mpSetTurnLabel();
+}
+
+function mpLabelFor(color){
+  const p = mp.players.find(pp=>pp.color===color);
+  const name = p ? p.name : color;
+  return color===mp.myColor ? `${name} (እርስዎ)` : name;
+}
+
+function mpBuildBoardDom(){
+  const board = document.getElementById('mpBoard');
+  board.innerHTML = '';
+  const cellPct = 100/13;
+  LudoEngine.RING.forEach(([r,c], i)=>{
+    const d = document.createElement('div');
+    d.className = 'cell' + (LudoEngine.SAFE_GLOBAL.has(i) ? ' safe' : '');
+    d.style.width = cellPct+'%'; d.style.height = cellPct+'%';
+    d.style.left = (c*cellPct)+'%'; d.style.top = (r*cellPct)+'%';
+    board.appendChild(d);
+  });
+  ['red','green','yellow','blue'].forEach(color=>{
+    const y = document.createElement('div');
+    y.className = 'yard '+color;
+    for(let i=0;i<4;i++){
+      const s = document.createElement('div');
+      s.className='slot'; s.dataset.color=color; s.dataset.slot=i;
+      y.appendChild(s);
+    }
+    board.appendChild(y);
+  });
+  const home = document.createElement('div');
+  home.className='home';
+  home.innerHTML = `
+    <div class="q" style="background:var(--red)"><b id="mpfin-red">0</b></div>
+    <div class="q" style="background:var(--green)"><b id="mpfin-green">0</b></div>
+    <div class="q" style="background:var(--blue)"><b id="mpfin-blue">0</b></div>
+    <div class="q" style="background:var(--yellow)"><b id="mpfin-yellow">0</b></div>
+  `;
+  board.appendChild(home);
+}
+
+function mpBuildHud(){
+  const hud = document.getElementById('mpHud');
+  hud.innerHTML='';
+  mp.players.forEach(p=>{
+    const card = document.createElement('div');
+    card.className='pcard'; card.id='mppcard-'+p.color;
+    card.innerHTML = `
+      <div class="pname"><span class="sw" style="background:var(--${p.color})"></span>${mpLabelFor(p.color)}</div>
+      <div class="lane" id="mplane-${p.color}">
+        ${[0,1,2,3].map(t=>`<div style="display:flex;gap:2px;flex:1;" id="mplane-${p.color}-${t}">
+          ${[0,1,2,3,4].map(()=>'<i></i>').join('')}
+        </div>`).join('')}
+      </div>`;
+    hud.appendChild(card);
+  });
+}
+
+function mpGlobalIndexFor(color, r){ return LudoEngine.globalIndexFor(color, r); }
+
+function mpRenderTokens(){
+  const board = document.getElementById('mpBoard');
+  board.querySelectorAll('.token').forEach(t=>t.remove());
+  const cellPct = 100/13;
+  const finished = {red:0,green:0,yellow:0,blue:0};
+  const st = mp.state;
+  if (!st) return;
+
+  st.active.forEach(color=>{
+    st.tokens[color].forEach((r, idx)=>{
+      for(let i=0;i<5;i++){
+        const dot = document.querySelector(`#mplane-${color}-${idx} i:nth-child(${i+1})`);
+        if(!dot) continue;
+        const stretchStep = r - LudoEngine.RING_STEPS;
+        dot.classList.toggle('on', r>=LudoEngine.RING_STEPS && stretchStep>i);
+      }
+      if (r === -1){
+        const slot = document.querySelector(`#mpBoard .yard.${color} .slot[data-slot="${idx}"]`);
+        if (slot){
+          const rect = slot.getBoundingClientRect();
+          const brect = board.getBoundingClientRect();
+          mpPlaceToken(color, idx, (rect.left-brect.left)/brect.width*100, (rect.top-brect.top)/brect.height*100, brect.width);
+        }
+      } else if (r >= LudoEngine.FINISH_R){
+        finished[color]++;
+      } else if (r >= LudoEngine.RING_STEPS){
+        // shown via lane only
+      } else {
+        const gi = mpGlobalIndexFor(color, r);
+        const [row,col] = LudoEngine.RING[gi];
+        mpPlaceTokenGrid(color, idx, row, col, cellPct);
+      }
+    });
+  });
+  Object.keys(finished).forEach(c=>{ const el=document.getElementById('mpfin-'+c); if(el) el.textContent = finished[c]; });
+}
+
+function mpIsMovable(color, idx){
+  const st = mp.state;
+  return st && st.awaitingPick && color===mp.myColor && LudoEngine.currentColor(st)===mp.myColor && st.movable.includes(idx);
+}
+
+function mpPlaceTokenGrid(color, idx, row, col, cellPct){
+  const board = document.getElementById('mpBoard');
+  const size = cellPct*0.72;
+  const jitter = [[0,0],[10,0],[0,10],[10,10]][idx%4];
+  const el = document.createElement('div');
+  el.className = 'token tok-'+color;
+  el.style.width = size+'%'; el.style.height = size+'%';
+  el.style.left = (col*cellPct + cellPct*0.14 + jitter[0]*0.012) + '%';
+  el.style.top  = (row*cellPct + cellPct*0.14 + jitter[1]*0.012) + '%';
+  el.innerHTML = '<div class="pip"></div>';
+  if (mpIsMovable(color, idx)) el.classList.add('movable');
+  el.onclick = ()=> mpTryPickToken(color, idx);
+  board.appendChild(el);
+}
+function mpPlaceToken(color, idx, leftPct, topPct, boardWidthPx){
+  const board = document.getElementById('mpBoard');
+  const sizePx = boardWidthPx*0.072;
+  const el = document.createElement('div');
+  el.className = 'token tok-'+color;
+  el.style.width = sizePx+'px'; el.style.height = sizePx+'px';
+  el.style.left = 'calc(' + leftPct + '% + ' + (boardWidthPx*0.11) + 'px)';
+  el.style.top  = 'calc(' + topPct + '% + ' + (boardWidthPx*0.11) + 'px)';
+  el.innerHTML = '<div class="pip"></div>';
+  if (mpIsMovable(color, idx)) el.classList.add('movable');
+  el.onclick = ()=> mpTryPickToken(color, idx);
+  board.appendChild(el);
+}
+
+function mpSetTurnLabel(){
+  const st = mp.state;
+  document.querySelectorAll('#mpHud .pcard').forEach(c=>c.classList.remove('turn'));
+  if (!st) return;
+  const cc = LudoEngine.currentColor(st);
+  const pc = document.getElementById('mppcard-'+cc);
+  if (pc) pc.classList.add('turn');
+  const el = document.getElementById('mpTurnLabel');
+  if (st.over){ el.textContent = 'ጨዋታው አልቋል'; return; }
+  el.innerHTML = (cc===mp.myColor)
+    ? 'የ<b>እርስዎ</b> ተራ ነው — ዳይሱን ይንኩ'
+    : `የ<b>${mpLabelFor(cc)}</b> ተራ ነው...`;
+}
+
+function mpHandleDiceTap(){
+  const st = mp.state;
+  if (!mp.socket || !st || st.over) return;
+  if (LudoEngine.currentColor(st) !== mp.myColor || st.awaitingPick) return;
+  mp.socket.emit('game:roll');
+}
+function mpTryPickToken(color, idx){
+  if (!mpIsMovable(color, idx)) return;
+  mp.socket.emit('game:move', { tokenIdx: idx });
+}
+
+function mpShowResults({ ranking, rewards }){
+  // ranking: [{color, name, rank}], rewards: { [color]: amount } (only mine matters for wallet)
+  const myEntry = ranking.find(r=>r.color===mp.myColor);
+  const myReward = rewards[mp.myColor] || 0;
+  wallet.coins += myReward; // server already persisted; this just reflects it locally without a refetch
+  renderWallet();
+
+  document.getElementById('winEmoji').textContent = myEntry && myEntry.rank===1 ? '🏆' : '🏁';
+  document.getElementById('winTitle').textContent = myEntry ? `${myEntry.rank}ኛ ወጥተዋል!` : 'ጨዋታው አልቋል';
+  document.getElementById('winSub').style.display = 'none';
+  const list = document.getElementById('winRankList');
+  list.style.display = 'block';
+  list.innerHTML = ranking.map(r=>`
+    <div class="rankrow">
+      <div class="rk">${r.rank}</div>
+      <div class="sw" style="background:var(--${r.color})"></div>
+      <div class="nm">${r.name}${r.color===mp.myColor?' (እርስዎ)':''}</div>
+      <div class="pt">+${rewards[r.color]||0} 🪙</div>
+    </div>`).join('');
+  document.getElementById('winReward').textContent = `+${myReward} 🪙 ለእርስዎ`;
+  document.getElementById('winModal').classList.add('show');
+
+  mp.screen = 'setup';
+}
+
+
+/* =========================================================================
+   Boot
+   ========================================================================= */
+(async function init(){
+  await loadState();
+  if (tgUser && tgUser.first_name){
+    document.getElementById('hello').textContent = 'ሰላም, ' + tgUser.first_name;
+  } else if (!LIVE){
+    document.getElementById('hello').textContent = '⚠️ የሙከራ ሁነታ — Telegram ውስጥ አይደለም';
+  }
+  renderWallet();
+  renderTasks();
+  document.getElementById('loading').style.display='none';
+})();
+</script>
+</body>
+</html>
