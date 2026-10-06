@@ -68,42 +68,47 @@
     background:transparent;border:1.5px solid var(--line);color:var(--muted);
     font-family:'Noto Sans Ethiopic';font-weight:600;font-size:13px;cursor:pointer;}
 
-  /* ---- board ---- */
+  /* ---- board (classic bright Ludo look) ---- */
   .boardwrap{display:flex;justify-content:center;margin:6px 0 10px;}
   .board{position:relative;width:min(94vw,420px);aspect-ratio:1/1;
-    background:var(--panel2);border-radius:20px;border:2px solid var(--line);
-    box-shadow:inset 0 0 0 6px var(--bg);}
-  .cell{position:absolute;background:#2e3266;border-radius:3px;}
-  .cell.safe{background:#3a3f80;}
+    background:#F4F1E8;border-radius:14px;border:3px solid #1a1a1a;
+    box-shadow:0 6px 18px rgba(0,0,0,.45);}
+  .cell{position:absolute;background:#FDFCF7;border:1px solid #c9c4b3;box-sizing:border-box;}
+  .cell.safe{background:#FDFCF7;}
   .cell.safe::after{content:'★';position:absolute;inset:0;display:flex;align-items:center;
-    justify-content:center;font-size:52%;color:var(--gold2);}
-  .yard{position:absolute;border-radius:16px;display:grid;grid-template-columns:1fr 1fr;
-    grid-template-rows:1fr 1fr;gap:6%;padding:10%;}
-  .yard .slot{border-radius:50%;background:rgba(0,0,0,.18);display:flex;align-items:center;
-    justify-content:center;}
-  .yard.red{top:0;left:0;width:38.4%;height:38.4%;background:rgba(230,57,80,.20);}
-  .yard.green{top:0;right:0;width:38.4%;height:38.4%;background:rgba(41,182,115,.20);}
-  .yard.yellow{bottom:0;right:0;width:38.4%;height:38.4%;background:rgba(244,196,48,.20);}
-  .yard.blue{bottom:0;left:0;width:38.4%;height:38.4%;background:rgba(62,142,222,.20);}
+    justify-content:center;font-size:52%;color:#9a9484;}
+  .yard{position:absolute;display:grid;grid-template-columns:1fr 1fr;
+    grid-template-rows:1fr 1fr;gap:8%;padding:12%;}
+  .yard::before{content:'';position:absolute;inset:11%;background:#FDFCF7;border-radius:10%;
+    z-index:0;}
+  .yard .slot{border-radius:50%;background:rgba(0,0,0,.08);display:flex;align-items:center;
+    justify-content:center;position:relative;z-index:1;}
+  .yard.red{top:0;left:0;width:38.4%;height:38.4%;background:var(--red);}
+  .yard.green{top:0;right:0;width:38.4%;height:38.4%;background:var(--green);}
+  .yard.yellow{bottom:0;right:0;width:38.4%;height:38.4%;background:var(--yellow);}
+  .yard.blue{bottom:0;left:0;width:38.4%;height:38.4%;background:var(--blue);}
   .home{position:absolute;top:38.4%;left:38.4%;width:23.2%;height:23.2%;
     background:conic-gradient(var(--red) 0 90deg, var(--green) 90deg 180deg,
     var(--yellow) 180deg 270deg, var(--blue) 270deg 360deg);
-    border-radius:8px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;
-    transform:rotate(45deg);overflow:hidden;box-shadow:0 0 0 3px var(--bg);}
+    border-radius:4px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;
+    transform:rotate(45deg);overflow:hidden;box-shadow:0 0 0 3px #1a1a1a;}
   .home .q{display:flex;align-items:center;justify-content:center;}
   .home .q b{transform:rotate(-45deg);font-size:11px;color:#111;font-family:'Baloo 2';
     text-shadow:0 1px 0 rgba(255,255,255,.35);}
   .token{position:absolute;border-radius:50%;display:flex;align-items:center;justify-content:center;
-    box-shadow:0 2px 4px rgba(0,0,0,.5), inset 0 -3px 0 rgba(0,0,0,.25);
+    box-shadow:0 2px 5px rgba(0,0,0,.5), inset 0 2px 3px rgba(255,255,255,.55),
+    inset 0 -3px 4px rgba(0,0,0,.3);
+    border:2px solid rgba(0,0,0,.25);
     transition:left .35s cubic-bezier(.4,1.8,.5,1), top .35s cubic-bezier(.4,1.8,.5,1);
     cursor:pointer; z-index:5;}
   .token.movable{animation:pulse 0.8s ease-in-out infinite;}
   @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.22)}}
-  .token .pip{width:38%;height:38%;border-radius:50%;background:rgba(255,255,255,.55);}
-  .tok-red{background:radial-gradient(circle at 32% 28%,#ff8a97,var(--red));}
-  .tok-green{background:radial-gradient(circle at 32% 28%,#7be8b8,var(--green));}
-  .tok-yellow{background:radial-gradient(circle at 32% 28%,#ffe58a,var(--yellow));}
-  .tok-blue{background:radial-gradient(circle at 32% 28%,#9dc9f7,var(--blue));}
+  .token .pip{width:34%;height:34%;border-radius:50%;background:rgba(255,255,255,.6);
+    margin-top:-18%;}
+  .tok-red{background:radial-gradient(circle at 34% 26%,#ff8a97,var(--red) 65%);}
+  .tok-green{background:radial-gradient(circle at 34% 26%,#7be8b8,var(--green) 65%);}
+  .tok-yellow{background:radial-gradient(circle at 34% 26%,#ffe58a,var(--yellow) 65%);}
+  .tok-blue{background:radial-gradient(circle at 34% 26%,#9dc9f7,var(--blue) 65%);}
 
   /* ---- HUD ---- */
   .hud{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
@@ -187,6 +192,13 @@
   .rankrow .sw{width:10px;height:10px;border-radius:50%;flex:none;}
   .rankrow .nm{flex:1;}
   .rankrow .pt{font-family:'Baloo 2';color:var(--gold2);}
+
+  .lbrow{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);
+    border-radius:14px;padding:11px 13px;margin-bottom:8px;}
+  .lbrow.me{border-color:var(--gold);background:linear-gradient(180deg,#3a3c6e,#2a2c58);}
+  .lbrow .pos{width:26px;text-align:center;font-family:'Baloo 2';font-size:15px;color:var(--gold2);flex:none;}
+  .lbrow .nm{flex:1;font-size:13.5px;font-weight:600;}
+  .lbrow .cn{font-family:'Baloo 2';color:var(--gold2);font-size:14px;}
 
   .loading{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;
     justify-content:center;z-index:100;flex-direction:column;gap:12px;}
@@ -284,6 +296,16 @@
   <div id="tasksList"></div>
 </div>
 
+<!-- LEADERBOARD -->
+<div class="screen" id="screen-board">
+  <h2 class="section" style="margin-top:6px;">🏆 ደረጃ (Leaderboard)</h2>
+  <div class="card" id="myRankCard" style="text-align:center;display:none;">
+    <div style="font-size:12px;color:var(--muted);">የእርስዎ ደረጃ</div>
+    <div class="num" id="myRankVal" style="font-size:24px;color:var(--gold2);">—</div>
+  </div>
+  <div id="leaderboardList"></div>
+</div>
+
 <!-- WALLET -->
 <div class="screen" id="screen-wallet">
   <h2 class="section" style="margin-top:6px;">👛 ዋሌት</h2>
@@ -309,6 +331,7 @@
 <div class="navbar">
   <div class="navbtn active" data-tab="play" onclick="switchTab('play')"><div class="ic">🎲</div>ጨዋታ</div>
   <div class="navbtn" data-tab="tasks" onclick="switchTab('tasks')"><div class="ic">✅</div>ተግባራት</div>
+  <div class="navbtn" data-tab="board" onclick="switchTab('board')"><div class="ic">🏆</div>ደረጃ</div>
   <div class="navbtn" data-tab="wallet" onclick="switchTab('wallet')"><div class="ic">👛</div>ዋሌት</div>
 </div>
 
@@ -417,6 +440,31 @@ function switchTab(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-'+name).classList.add('active');
   document.querySelectorAll('.navbtn').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
+  if (name==='board') loadLeaderboard();
+}
+
+async function loadLeaderboard(){
+  const list = document.getElementById('leaderboardList');
+  if (!LIVE){ list.innerHTML = '<div style="color:var(--muted);font-size:12.5px;text-align:center;">⚠️ ደረጃ ሰሌዳ በTelegram ውስጥ ብቻ ይታያል</div>'; return; }
+  list.innerHTML = '<div style="color:var(--muted);font-size:12.5px;text-align:center;">እየተጫነ ነው...</div>';
+  try{
+    const r = await api('/api/leaderboard');
+    if (r.myRank){
+      document.getElementById('myRankCard').style.display = 'block';
+      document.getElementById('myRankVal').textContent = '#' + r.myRank;
+    }
+    const medals = ['🥇','🥈','🥉'];
+    list.innerHTML = r.top.map((u, i)=>{
+      const isMe = tgUser && String(u.id)===String(tgUser.id);
+      return `<div class="lbrow ${isMe?'me':''}">
+        <div class="pos">${medals[i]||(i+1)}</div>
+        <div class="nm">${u.name}${isMe?' (እርስዎ)':''}</div>
+        <div class="cn">${u.coins} 🪙</div>
+      </div>`;
+    }).join('') || '<div style="color:var(--muted);font-size:12.5px;text-align:center;">ገና ማንም የለም</div>';
+  }catch(e){
+    list.innerHTML = '<div style="color:var(--muted);font-size:12.5px;text-align:center;">⚠️ መጫን አልተቻለም</div>';
+  }
 }
 
 function selectTopMode(mode){
